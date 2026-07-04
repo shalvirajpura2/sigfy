@@ -4,12 +4,12 @@ from __future__ import annotations
 import asyncio
 import uuid
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
 
 from .models import BatchDraftRequest, BatchDraftResponse, DraftResponse
-from .main import draft, _authorize
+# NOTE: import of draft/_authorize is postponed to runtime to avoid circular import.
 
 log = logging.getLogger("benefits.tasks")
 
@@ -39,8 +39,11 @@ async def _process_batch(task_id: str, batch_req: BatchDraftRequest, api_key: st
     t.status = TaskStatus.RUNNING
     log.info("[AsyncTask %s] started – %d requests", task_id, len(batch_req.requests))
 
-    responses: List[DraftResponse] = []
     try:
+        # Lazy import to break circular dependency
+        from .main import draft, _authorize
+        # Process each request using the existing draft endpoint
+        responses: List[DraftResponse] = []
         for i, req in enumerate(batch_req.requests, start=1):
             if t.cancel_requested:
                 t.status = TaskStatus.CANCELLED
