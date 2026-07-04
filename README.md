@@ -1,3 +1,13 @@
+---
+title: sigfy
+emoji: 🤖
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # sigfy: RAG-Powered Benefits Email Assistant
 
 **sigfy** is a Gmail Workspace Add-on backed by a FastAPI Retrieval-Augmented Generation (RAG) service. It helps benefits account managers draft accurate, evidence-backed replies using the provided benefits documents.

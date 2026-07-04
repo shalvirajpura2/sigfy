@@ -127,63 +127,21 @@ def _complete_anthropic(user_prompt: str) -> str:
 
 def _complete_openai(user_prompt: str) -> str:
     from openai import OpenAI
-    import logging
-    log = logging.getLogger("benefits")
 
-    # Gather candidate API keys
-    keys = []
-    if settings.groq_api_keys:
-        keys.extend(settings.groq_api_keys)
-    if settings.openai_api_key:
-        keys.append(settings.openai_api_key)
-
-    # Attempt keys in sequence
-    last_exception = None
-    for idx, key in enumerate(keys):
-        try:
-            base_url = settings.openai_base_url if settings.openai_base_url else None
-            client = OpenAI(api_key=key, base_url=base_url)
-            resp = client.chat.completions.create(
-                model=settings.openai_model,
-                max_tokens=settings.max_tokens,
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            log.info("LLM call succeeded with API key index %d", idx)
-            return resp.choices[0].message.content or ""
-        except Exception as e:
-            log.warning("API key index %d failed: %s", idx, e)
-            last_exception = e
-
-    # Fallback to Gemini if all primary keys failed and a Gemini key is configured
-    if settings.gemini_api_key:
-        log.info("Attempting fallback to Gemini API (gemini-1.5-flash)...")
-        try:
-            client = OpenAI(
-                api_key=settings.gemini_api_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-            )
-            resp = client.chat.completions.create(
-                model="gemini-1.5-flash",
-                max_tokens=settings.max_tokens,
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            log.info("LLM call succeeded via Gemini fallback.")
-            return resp.choices[0].message.content or ""
-        except Exception as gemini_err:
-            log.error("Gemini fallback failed: %s", gemini_err)
-            raise gemini_err
-
-    if last_exception:
-        raise last_exception
-    raise RuntimeError("No LLM API keys configured.")
+    client = OpenAI(
+        api_key=settings.openai_api_key,
+        base_url=settings.openai_base_url if settings.openai_base_url else None,
+    )
+    resp = client.chat.completions.create(
+        model=settings.openai_model,
+        max_tokens=settings.max_tokens,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    return resp.choices[0].message.content or ""
 
 
 def generate_draft(subject: str, sender: str, body: str, chunks: list[dict],

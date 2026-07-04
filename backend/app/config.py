@@ -25,21 +25,13 @@ class Settings:
     openai_base_url: str = _flag("OPENAI_BASE_URL")
     max_tokens: int = int(_flag("LLM_MAX_TOKENS", "1600"))
 
-    # Key Rotation & Fallback
-    gemini_api_key: str = _flag("GEMINI_API_KEY")
-    
-    @property
-    def groq_api_keys(self) -> list[str]:
-        val = _flag("GROQ_API_KEYS")
-        return [k.strip() for k in val.split(",") if k.strip()]
-
     @property
     def provider(self) -> str:
         if self.llm_provider != "auto":
             return self.llm_provider
         if self.anthropic_api_key:
             return "anthropic"
-        if self.openai_api_key or self.groq_api_keys or self.gemini_api_key:
+        if self.openai_api_key:
             return "openai"
         return "none"
 
