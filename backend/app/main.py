@@ -50,7 +50,12 @@ def health() -> dict:
 @app.post("/draft", response_model=DraftResponse)
 def draft(req: DraftRequest, x_api_key: str | None = Header(default=None)) -> DraftResponse:
     _authorize(x_api_key)
-    # Relevance filter: only process benefits‑related emails if ALLOWED_KEYWORDS is set
+
+    # ── Guard 1: empty body ──────────────────────────────────────────────
+    if not req.body.strip():
+        raise HTTPException(status_code=422, detail="email body is empty")
+
+    # ── Guard 2: relevance filter (only when ALLOWED_KEYWORDS is set) ───
     if settings.allowed_keywords:
         combined_text = f"{req.subject} {req.body}".lower()
         if not any(kw.lower() in combined_text for kw in settings.allowed_keywords):
@@ -58,14 +63,13 @@ def draft(req: DraftRequest, x_api_key: str | None = Header(default=None)) -> Dr
             return DraftResponse(
                 found=False,
                 confidence="low",
-                draft="The email does not appear to be benefits‑related, so no draft was generated.",
+                draft="The email does not appear to be benefits-related, so no draft was generated.",
                 citations=[],
                 notes="Filtered out by allowed_keywords configuration.",
                 model="none",
                 retrieved=[],
             )
 
-        raise HTTPException(status_code=422, detail="email body is empty")
 
     start_time = time.time()
     query = f"{req.subject}\n{req.body}".strip()
