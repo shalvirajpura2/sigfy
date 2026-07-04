@@ -150,18 +150,10 @@ def generate_draft(subject: str, sender: str, receiver: str, body: str, chunks: 
     from .retrieval import validate_evidence
 
     top_chunk = chunks[0] if chunks else None
-    if not validate_evidence(top_chunk):
-        return DraftResponse(
-            found=False,
-            confidence="low",
-            draft="I'm confirming the details and will follow up with more information as soon as possible.",
-            citations=[],
-            notes="Evidence Validation Gate: Insufficient matching passages found in plan documents.",
-            model="none (bypass)",
-            retrieved=_retrieved(chunks) if debug else [],
-        )
+    gate_passed = validate_evidence(top_chunk)
 
-    context = build_context(chunks)
+    # Always build context from whatever chunks we retrieved (may be weak)
+    context = build_context(chunks) if chunks else "(no matching passages found in plan documents)"
     user_prompt = build_user_prompt(subject, sender, body, context)
 
     if not settings.has_llm:
@@ -176,12 +168,16 @@ def generate_draft(subject: str, sender: str, receiver: str, body: str, chunks: 
     text = (_complete_openai if settings.provider == "openai" else _complete_anthropic)(user_prompt)
     data = _extract_json(text)
 
+    evidence_note = "" if gate_passed else "[Low evidence] Top retrieved chunk did not meet confidence thresholds – LLM answered with available context."
+    model_notes = (data.get("notes") or "").strip()
+    combined_notes = "\n".join(filter(None, [evidence_note, model_notes]))
+
     return DraftResponse(
         found=bool(data.get("found", False)),
-        confidence=str(data.get("confidence", "medium")).lower(),
+        confidence=str(data.get("confidence", "medium" if gate_passed else "low")).lower(),
         draft=(data.get("draft") or "").strip(),
         citations=_to_citations(data.get("citations", []), chunks),
-        notes=(data.get("notes") or "").strip(),
+        notes=combined_notes,
         model=settings.model,
         retrieved=_retrieved(chunks) if debug else [],
     )
