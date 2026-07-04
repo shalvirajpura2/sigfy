@@ -32,6 +32,9 @@ Hello, the maximum amount you can contribute to the Health FSA for 2026 is $3,30
 
 **notes:** The information is based on the most recent document provided, which is effective January 2026.
 
+### Gmail Add-on Screenshot:
+![FSA Limit Draft Screenshot](images/email%201.png)
+
 ---
 
 ## Orthodontist coverage for my daughter
@@ -60,6 +63,9 @@ Please let me know if you have any further questions or if there's anything else
   _The orthodontic care lifetime maximum under the Chevron Dental PPO Plan will increase for network benefits. The orthodontic care lifetime maximum for out-of-network benefits has not changed._  (grounded)
 
 **notes:** Lifetime maximums are based on the most recent effective date, January 2022.
+
+### Gmail Add-on Screenshot:
+![Orthodontist Coverage Draft Screenshot](images/email%202.png)
 
 ---
 
@@ -99,6 +105,9 @@ Best regards,
 
 **notes:** The travel benefit is a new provision effective August 1, 2022, and is subject to certain requirements and limitations as outlined in the plan documents.
 
+### Gmail Add-on Screenshot:
+![Travel Specialist Draft Screenshot](images/email%203.png)
+
 ---
 
 ## Did my critical illness coverage change?
@@ -135,6 +144,9 @@ Best regards,
 
 **notes:** The open enrollment period has passed, but the employee's current coverage will continue automatically.
 
+### Gmail Add-on Screenshot:
+![Critical Illness Draft Screenshot](images/email%204.png)
+
 ---
 
 ## Enrolling in long-term care insurance
@@ -159,6 +171,9 @@ The Long-Term Care Insurance Plan closed to new entrants after October 13, 2019.
   _current LTC plan closed to new entrants after october 13, 2019_  (grounded)
 
 **notes:** The plan is no longer open to new entrants, and enrollment is not possible.
+
+### Gmail Add-on Screenshot:
+![Long-Term Care Draft Screenshot](images/email%205.png)
 
 ---
 
