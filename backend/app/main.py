@@ -49,7 +49,21 @@ def health() -> dict:
 @app.post("/draft", response_model=DraftResponse)
 def draft(req: DraftRequest, x_api_key: str | None = Header(default=None)) -> DraftResponse:
     _authorize(x_api_key)
-    if not req.body.strip():
+    # Relevance filter: only process benefits‑related emails if ALLOWED_KEYWORDS is set
+    if settings.allowed_keywords:
+        combined_text = f"{req.subject} {req.body}".lower()
+        if not any(kw.lower() in combined_text for kw in settings.allowed_keywords):
+            log.info("[Filter] Email does not match allowed keywords – skipping draft generation")
+            return DraftResponse(
+                found=False,
+                confidence="low",
+                draft="The email does not appear to be benefits‑related, so no draft was generated.",
+                citations=[],
+                notes="Filtered out by allowed_keywords configuration.",
+                model="none",
+                retrieved=[],
+            )
+
         raise HTTPException(status_code=422, detail="email body is empty")
 
     start_time = time.time()
@@ -75,7 +89,7 @@ def draft(req: DraftRequest, x_api_key: str | None = Header(default=None)) -> Dr
     )
 
     gen_start = time.time()
-    resp = generate_draft(req.subject, req.sender, req.body, chunks, debug=req.debug)
+    resp = generate_draft(req.subject, req.sender, req.receiver, req.body, chunks, debug=req.debug)
     gen_ms = round((time.time() - gen_start) * 1000, 2)
 
     total_ms = round((time.time() - start_time) * 1000, 2)

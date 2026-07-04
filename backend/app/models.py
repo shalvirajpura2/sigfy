@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class DraftRequest(BaseModel):
     subject: str = ""
     sender: str = ""
+    receiver: str = ""
     body: str
     debug: bool = False
 

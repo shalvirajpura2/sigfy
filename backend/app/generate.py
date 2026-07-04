@@ -144,8 +144,9 @@ def _complete_openai(user_prompt: str) -> str:
     return resp.choices[0].message.content or ""
 
 
-def generate_draft(subject: str, sender: str, body: str, chunks: list[dict],
+def generate_draft(subject: str, sender: str, receiver: str, body: str, chunks: list[dict],
                    debug: bool = False) -> DraftResponse:
+    _ = receiver  # currently unused, kept for API compatibility
     from .retrieval import validate_evidence
 
     top_chunk = chunks[0] if chunks else None
