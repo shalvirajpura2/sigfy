@@ -1,0 +1,26 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# retrieval index (rebuild with: python -m scripts.build_index)
+backend/data/index/
+
+# model cache
+.cache/
+*.egg-info/
+
+# apps script local clasp auth
+addon/.clasp.json
+.clasprc.json
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# pytest
+.pytest_cache/
