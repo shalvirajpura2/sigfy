@@ -99,7 +99,7 @@ clasp login
 clasp create --type standalone --title "sigfy benefits assistant"
 clasp push
 ```
-Open Apps Script editor (`clasp open`) → **Project Settings** → **Script Properties**, and set `BACKEND_URL` to your Ngrok HTTPS URL. Test and install the add-on in Gmail!
+Open the script project URL printed by `clasp create` (or visit [script.google.com](https://script.google.com/)) → **Project Settings** → **Script Properties**, and set `BACKEND_URL` to your tunnel URL. Test and install the add-on in Gmail!
 
 ---
 
