@@ -1,6 +1,6 @@
 # sigfy RAG Layered Architecture
 
-![sigfy RAG System Architecture](images/architecture.png)
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/4447b459-bf02-4a07-bb0d-21bec1aade54" />
 
 ## System Diagram
 
