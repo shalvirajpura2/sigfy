@@ -23,6 +23,7 @@ class Settings:
     openai_model_val: str = _flag("OPENAI_MODEL", "gpt-4o-mini")
     openai_base_url_val: str = _flag("OPENAI_BASE_URL")
     # Comma‑separated list of tokens that identify a benefits‑related email
+    max_tokens: int = int(_flag("LLM_MAX_TOKENS", "1600"))
     allowed_keywords: list[str] = _flag("ALLOWED_KEYWORDS").split(",") if _flag("ALLOWED_KEYWORDS") else []
 
     @property
