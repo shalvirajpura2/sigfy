@@ -20,10 +20,34 @@ class Settings:
     llm_provider: str = _flag("LLM_PROVIDER", "auto")
     anthropic_api_key: str = _flag("ANTHROPIC_API_KEY")
     anthropic_model: str = _flag("ANTHROPIC_MODEL", "claude-sonnet-5")
-    openai_api_key: str = _flag("OPENAI_API_KEY")
-    openai_model: str = _flag("OPENAI_MODEL", "gpt-4o-mini")
-    openai_base_url: str = _flag("OPENAI_BASE_URL")
+    openai_model_val: str = _flag("OPENAI_MODEL", "gpt-4o-mini")
+    openai_base_url_val: str = _flag("OPENAI_BASE_URL")
     max_tokens: int = int(_flag("LLM_MAX_TOKENS", "1600"))
+
+    @property
+    def openai_api_key(self) -> str:
+        # Accept any common naming for the API key
+        for var in ["OPENAI_API_KEY", "GROQ_API_KEYS", "GROQ_API_KEY"]:
+            val = _flag(var)
+            if val:
+                return val
+        return ""
+
+    @property
+    def openai_base_url(self) -> str:
+        if self.openai_base_url_val:
+            return self.openai_base_url_val
+        # Auto-detect Groq keys and route requests to Groq servers
+        if self.openai_api_key.startswith("gsk_"):
+            return "https://api.groq.com/openai/v1"
+        return ""
+
+    @property
+    def openai_model(self) -> str:
+        # Auto-default to Groq's model if Groq keys are present and model is unset
+        if (self.openai_model_val == "gpt-4o-mini" or not self.openai_model_val) and self.openai_api_key.startswith("gsk_"):
+            return "llama-3.3-70b-versatile"
+        return self.openai_model_val or "gpt-4o-mini"
 
     @property
     def provider(self) -> str:
