@@ -6,6 +6,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
+from . import tasks
 from .generate import generate_draft
 from .models import DraftRequest, DraftResponse, BatchDraftRequest, BatchDraftResponse
 from .retrieval import get_retriever
@@ -114,3 +115,34 @@ def batch_draft(batch_req: BatchDraftRequest, x_api_key: str | None = Header(def
         resp = draft(req, x_api_key)
         responses.append(resp)
     return BatchDraftResponse(responses=responses)
+# ---------------------------------------------------------------------------
+# Asynchronous batch processing (fire‑and‑forget, task‑id polling)
+# ---------------------------------------------------------------------------
+
+@app.post("/batch_draft_async")
+def batch_draft_async(batch_req: BatchDraftRequest, x_api_key: str | None = Header(default=None)):
+    """Enqueue a batch draft job and immediately return a task identifier."""
+    _authorize(x_api_key)
+    task_id = tasks.create_task(batch_req, x_api_key)
+    return {"task_id": task_id}
+
+@app.get("/task_status/{task_id}")
+def task_status(task_id: str):
+    """Poll the status of an asynchronous batch job. Returns the final result when finished."""
+    t = tasks.get_task(task_id)
+    if not t:
+        raise HTTPException(status_code=404, detail="Task not found")
+    result: dict = {"status": t.status}
+    if t.status == tasks.TaskStatus.FINISHED:
+        result["responses"] = t.responses
+    if t.status == tasks.TaskStatus.FAILED:
+        result["error"] = t.error_msg
+    return result
+
+@app.post("/task_cancel/{task_id}")
+def task_cancel(task_id: str):
+    """Request cancellation of a running or pending async batch job."""
+    if tasks.cancel_task(task_id):
+        return {"status": "CANCELLED"}
+    else:
+        raise HTTPException(status_code=400, detail="Cannot cancel – task not pending or running")
