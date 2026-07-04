@@ -8,13 +8,13 @@ app_port: 7860
 pinned: false
 ---
 
-# Sigfy: AI Benefits Email Assistant 🚀
+# Sigfy: AI Benefits Email Assistant
 
 An intelligent Gmail Workspace Add-on backed by a FastAPI Retrieval-Augmented Generation (RAG) backend. It helps benefits managers draft fast, grounded, and citation-backed replies using plan documents.
 
 ---
 
-## 📌 Quick Access Links
+## Quick Access Links
 * **Live Backend API (Hugging Face):** [https://huggingface.co/spaces/rshalvi/sigfy](https://huggingface.co/spaces/rshalvi/sigfy)
 * **GitHub Repository:** [https://github.com/shalvirajpura2/sigfy](https://github.com/shalvirajpura2/sigfy)
 * **View Draft Screenshots:** [sample-outputs.md](docs/sample-outputs.md) *(See screenshots of the Gmail Add-on UI drafting replies)*
@@ -22,7 +22,7 @@ An intelligent Gmail Workspace Add-on backed by a FastAPI Retrieval-Augmented Ge
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 1. [How It Works (Retrieval & Drafting)](#1-how-it-works-retrieval--drafting)
 2. [Key Design Choices](#2-key-design-choices)
 3. [Challenges & Solutions](#3-challenges--solutions)
