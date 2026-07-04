@@ -1,0 +1,42 @@
+[
+  {
+    "id": "fsa_limit",
+    "subject": "FSA contribution question",
+    "sender": "jmartinez@company.com",
+    "body": "Hi, I'm setting up my elections for next year and I thought the max I could put into my Health FSA was $3,200. A coworker mentioned it went up. Can you confirm what the actual limit is for 2026, and whether there's a minimum I have to contribute too?",
+    "expect_doc": "Health Care Spending Account (Health FSA)",
+    "expect_terms": ["3,300", "120"]
+  },
+  {
+    "id": "orthodontics",
+    "subject": "Orthodontist coverage for my daughter",
+    "sender": "r.chen@company.com",
+    "body": "My daughter needs braces and her orthodontist isn't in our dental network. What's the lifetime maximum the plan will pay for orthodontic care if we go out-of-network vs. staying in-network? Trying to figure out how much we'll be on the hook for.",
+    "expect_doc": "Dental PPO",
+    "expect_terms": ["2,000", "1,000"]
+  },
+  {
+    "id": "travel_specialist",
+    "subject": "Travel costs for a specialist out of state",
+    "sender": "dpatel@company.com",
+    "body": "My doctor is referring me to a specialist for a procedure that isn't available anywhere near me. Does our medical plan cover any of the travel or hotel costs to go get this done out of state? Not sure if this is something the plan even considers.",
+    "expect_doc": "Medical PPO (UHC)",
+    "expect_terms": ["lodging", "transportation"]
+  },
+  {
+    "id": "critical_illness_admin",
+    "subject": "Did my critical illness coverage change?",
+    "sender": "k.oconnor@company.com",
+    "body": "I got a notice that said something about a new administrator for my hospital indemnity and critical illness coverage. Do I need to do anything to keep my current coverage, or does it just carry over automatically? Wasn't sure if this required action on my end.",
+    "expect_doc": "Group Critical Illness Insurance",
+    "expect_terms": ["administrator"]
+  },
+  {
+    "id": "ltc_enroll",
+    "subject": "Enrolling in long-term care insurance",
+    "sender": "swilliams@company.com",
+    "body": "I've been meaning to sign up for the long-term care insurance plan for a couple years and never got around to it. I want to enroll now - can you send me the enrollment steps? Want to make sure I'm getting the same plan my manager has, since she signed up a while back.",
+    "expect_doc": "Long-Term Care Insurance",
+    "expect_terms": ["enroll"]
+  }
+]
