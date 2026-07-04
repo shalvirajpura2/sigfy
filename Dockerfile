@@ -14,5 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all backend source code and files
 COPY backend/ .
 
+# Build the search index at container build time
+RUN python -m scripts.build_index
+
 EXPOSE 7860
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
