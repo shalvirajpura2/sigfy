@@ -1,6 +1,6 @@
 ---
 title: sigfy
-emoji: 🤖
+emoji: 🚀
 colorFrom: blue
 colorTo: green
 sdk: docker
@@ -8,114 +8,154 @@ app_port: 7860
 pinned: false
 ---
 
-# sigfy: RAG-Powered Benefits Email Assistant
+# Sigfy: AI Benefits Email Assistant 🚀
 
-**sigfy** is a Gmail Workspace Add-on backed by a FastAPI Retrieval-Augmented Generation (RAG) service. It helps benefits account managers draft accurate, evidence-backed replies using the provided benefits documents.
-
-This project was built as a take-home assignment to demonstrate grounded document retrieval, citation-based response generation, and a Gmail Workspace Add-on experience.
-
-The implementation focuses on the core assignment requirements:
-* **Real Gmail Add-on UI**: A contextual sidebar rendering editable drafts and citations directly in Gmail.
-* **Grounded Retrieval**: Restricts the prompt context to document-grounded search evidence rather than stuffing full documents.
-* **Visible Citations**: Every claim is mapped to the exact document, section, and page.
-* **Grounded Response Generation**: The LLM generates replies using only the retrieved evidence and explicitly cites the supporting documents.
-* **Explicit "Not Found" Handling**: Bypasses the LLM completely when plan documents do not contain a clear answer.
-
-> **Assumption:** The provided benefits documents are treated as the authoritative source of truth. If sufficient supporting evidence cannot be retrieved, the assistant returns a "not found" response instead of generating an unsupported answer.
+An intelligent Gmail Workspace Add-on backed by a FastAPI Retrieval-Augmented Generation (RAG) backend. It helps benefits managers draft fast, grounded, and citation-backed replies using plan documents.
 
 ---
 
-## 1. How Retrieval & Answer Logic Works
-
-Instead of sending the entire document corpus to the LLM, the system first retrieves only the most relevant sections before generating a response:
-1. **Ingestion (Offline)**: Every PDF document is parsed, cleaned, and split into ~1,100-character chunks tagged with metadata (`document`, `page`, `section heading`, and `effective_date`).
-2. **Metadata-Guided Retrieval**: When an email is opened, the query is scanned for keywords matching specific documents. Retrieval preferentially searches this plan subset to reduce search noise. If matches are weak, it falls back to the full corpus.
-3. **Hybrid Search & Fusion**: Chunks are scored via stopword-filtered lexical search (BM25) and dense semantic embeddings (`bge-small-en-v1.5`), then combined using Reciprocal Rank Fusion (RRF).
-4. **Evidence Validation Gate**: Before invoking the LLM, the top matches are validated against similarity thresholds. If scores are too low, the LLM is bypassed, and a "not found" fallback draft is returned.
-5. **Grounded Response Generation**: The LLM synthesizes a response using the retrieved evidence only, selecting the most recent applicable policy when multiple document versions are retrieved.
-
-*For a detailed technical layout, see the [Layered Architecture Deep-Dive](docs/ARCHITECTURE.md).*
+## 📌 Quick Access Links
+* **Live Backend API (Hugging Face):** [https://huggingface.co/spaces/rshalvi/sigfy](https://huggingface.co/spaces/rshalvi/sigfy)
+* **GitHub Repository:** [https://github.com/shalvirajpura2/sigfy](https://github.com/shalvirajpura2/sigfy)
+* **View Draft Screenshots:** [sample-outputs.md](docs/sample-outputs.md) *(See screenshots of the Gmail Add-on UI drafting replies)*
+* **Architecture Diagram & Details:** [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
-## 2. Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| **Hybrid BM25 + Dense** | Combines exact terminology (figures, deductibles, carrier names) with semantic matching (synonyms like *braces* → *orthodontic*). |
-| **Metadata-Guided Retrieval** | Preferentially searches matched plan documents to reduce noise while maintaining full-corpus fallback. |
-| **Evidence Validation Gate** | Blocks LLM calls on out-of-scope or nonsense queries to prevent hallucinations and save tokens. |
-| **Offline Embedding Caching** | Embeddings are computed once offline; only the query is embedded online (`< 15ms` latency). |
-| **Separated Citation Fields** | Separates user-facing fields (`document`, `page`, `section`) from internal developer provenance (`chunk_id`, `score`). |
+## 📖 Table of Contents
+1. [How It Works (Retrieval & Drafting)](#1-how-it-works-retrieval--drafting)
+2. [Key Design Choices](#2-key-design-choices)
+3. [Challenges & Solutions](#3-challenges--solutions)
+4. [How We Verify Accuracy](#4-how-we-verify-accuracy)
+5. [Setup & Running Instructions](#5-setup--running-instructions)
+6. [Testing the API (cURL Examples)](#6-testing-the-api-curl-examples)
 
 ---
 
-## 3. What Was Most Challenging
+## 1. How It Works (Retrieval & Drafting)
 
-The biggest challenge was **balancing retrieval precision with recall** across multiple benefits documents containing overlapping vocabularies. For instance, a query about *orthodontics* can retrieve semantically similar but outdated tables from earlier plan years, leading a naive RAG model to quote a stale limit. 
+Instead of feeding whole PDF documents into the AI (which is slow and expensive), Sigfy extracts only the most relevant sections before drafting replies:
 
-To overcome this, I developed **Metadata-Guided Retrieval** to isolate plan scopes, slightly increased the BM25 weighting (`1.5` vs. `1.0`) to lock onto exact numbers, and built temporal parsing that forces the LLM to compare effective dates and note superseded policy versions.
-
----
-
-## 4. Accuracy & Validation Methodology
-
-We verified the pipeline's correctness through automated and manual scenarios:
-- **Automated Tests (`tests/test_retrieval.py`)**: Asserts that each sample email correctly routes to the expected plan document and retrieves key numbers.
-- **Groundedness Verification**: Run `python -m scripts.run_eval` to draft replies for all 5 sample emails, verifying:
-  1. *FSA limit*: Correctly returns the 2026 update of **$3,300**.
-  2. *Orthodontics*: Correctly returns the 2022 SMM update of **$2,000** (overriding the older $1,500 base plan limit).
-  3. *Travel*: Correctly extracts qualifying lodging/transportation rules.
-  4. *Critical illness*: Correctly notes the 2026 Securian admin carrier change.
-  5. *LTC enroll*: Correctly flags the plan's closed status (closed in 2019/2020) and outputs a closed draft status rather than enrollment steps.
-- **Nonsense Query Bypass**: Verified that queries like *"What is the capital of France?"* trigger the Validation Gate, bypassing the LLM and returning a clean "not found" fallback draft.
-- **Overlapping Plan Check**: Querying *"My daughter needs braces while traveling"* retrieves candidates from both **`Dental PPO`** and **`Medical PPO (UHC)`** plans.
-- **Conflicting Policy Versions Check**: Verified that when a policy conflict query is run, retrieval returns both versions and the newer policy is selected based on its effective date.
+1. **Pre-computing Search Files (Offline Ingestion)**: Plan PDFs are split into clean, short paragraphs. We pre-generate mathematical coordinates (embeddings) for these paragraphs using a local model (`bge-small-en-v1.5`) and cache them. This lets the backend search hundreds of pages in under 15 milliseconds on a normal CPU.
+2. **Context-Aware Smart Filter**: When an email arrives, the query is scanned for keywords. If it's about braces, it targets the dental plan. If it's general, it searches the entire library.
+3. **Keyword & Meaning Search (Hybrid Retrieval)**: We search the paragraphs using both traditional keyword matching (BM25) and conceptual meaning matching (dense vector search) to find the best paragraphs.
+4. **Confidence Signal (Evidence Gate)**: The top matching paragraph's score is evaluated. If it's a weak match, we flag the response as low-confidence and alert the user with a `[Low evidence]` note.
+5. **Grounded Reply Generation**: The AI writes a friendly draft reply using **only** the retrieved paragraphs. If multiple document versions exist, the AI compares effective dates and selects the newest rule.
 
 ---
 
-## 5. Future Work Roadmap
+## 2. Key Design Choices
 
-- **Cross-Encoder Reranking**: Refine candidates using a model like `BAAI/bge-reranker-base` to narrow citations.
-- **Multi-Question Decomposition**: Split compound employee questions into separate sub-queries, retrieving and merging candidates individually.
-- **Richer Metadata Extraction**: Structurally parse PDF layouts to capture exact sections and effective dates instead of relying on regex heuristics.
+* **Prioritizing Keywords over Meanings (Lexical Bias)**: In insurance documents, exact terms (like "$3,300" or plan names) are much more important than abstract meanings. We prioritize keyword matching to ensure the correct numbers are always selected.
+* **Metadata Scope Filtering**: Restricting searches to matching plan documents (like the Dental PDF for orthodontic questions) prevents irrelevant details in other files from corrupting the AI's response.
+* **Async Batch Processing**: Benefits coordinators receive hundreds of emails. The backend supports asynchronous batching: users send a batch request, get a task ID instantly, and let the backend process replies in the background without blocking the UI.
+* **Privacy-First Console Logging**: We never print email bodies or names to the logs. We use anonymous request hashes to trace query latency and search performance safely.
 
 ---
 
-## 6. Quick Start
+## 3. Challenges & Solutions
 
-### 1. Start Backend FastAPI Server
+### Overlapping Vocabularies & Outdated Rules
+**Challenge**: Plan documents from different years have overlapping keywords. A naive search might pull an outdated orthodontic limit from a 2019 plan instead of the active 2022 limit.
+
+**Solution**:
+1. We parse and index the **effective date** of every document section.
+2. If the retriever pulls multiple matching policies, the AI is instructed to look at the effective dates, discard older limits, and explicitly mention in the notes that the older policy has been updated.
+3. We added a confidence filter that overrides the AI's output and marks it as low-confidence if the matches are weak.
+
+---
+
+## 4. How We Verify Accuracy
+
+We verify the correctness of the assistant using 5 real email scenarios representing complex edge cases:
+
+1. **FSA Limits (2026 Change)**: The AI correctly identifies that the Health FSA limit has increased to **$3,300** (from $3,200) for 2026, citing the new plan document.
+2. **Orthodontics (Network vs. Out-of-Network)**: The AI accurately pulls the lifetime limits of **$2,000** (in-network) and **$1,000** (out-of-network) from the newer SMM update.
+3. **Travel Reimbursement for Specialists**: The AI extracts the rule that the specialist must be over 100 miles away to qualify for lodging/transportation coverage.
+4. **Carrier Administrator Changes**: The AI correctly identifies that Securian has taken over Critical Illness claims from Aflac starting 2026 and notifies the employee that their coverage carries over automatically.
+5. **Closed Plan Request (Long-Term Care)**: The employee asks to enroll in Long-Term Care. The AI identifies that the plan closed to new enrollees in 2019, marks the response as low-confidence (`found=false`), and drafts a polite response explaining that enrollment is no longer possible.
+6. **Nonsense Query Handling**: If an employee asks an unrelated question (e.g., *"What is the capital of France?"*), the system filters it out or marks it as "not found" instead of guessing or fabricating an answer.
+
+---
+
+## 5. Setup & Running Instructions
+
+### Backend Server (FastAPI)
+You can run the backend server locally inside a Python virtual environment:
+
 ```bash
+# 1. Clone and navigate to backend
 cd backend
+
+# 2. Set up virtual environment
 python -m venv .venv
-.venv\Scripts\activate                # Linux/macOS: source .venv/bin/activate
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
-cp .env.example .env                  # Add Groq API Key under OPENAI_API_KEY
-python -m scripts.build_index         # Parse PDFs and generate index
-python -m tests.test_retrieval        # Run retrieval routing checks
+
+# 4. Configure environment variables
+cp .env.example .env           # Open .env and add your Groq/OpenAI API key
+
+# 5. Build the search index
+python -m scripts.build_index
+
+# 6. Run the server
 uvicorn app.main:app --reload
 ```
-Expose the FastAPI port to the web:
-```bash
-ngrok http 8000 
-or 
-npx localtunnel --port 8000
-```
 
-### 2. Deploy Gmail Add-on UI
+*To deploy the server to the web, you can use ngrok: `ngrok http 8000` or localtunnel: `npx localtunnel --port 8000`.*
+
+### Gmail Add-on UI (Google Apps Script)
 ```bash
 cd addon
 clasp login
 clasp create --type standalone --title "sigfy benefits assistant"
 clasp push
 ```
-Open the script project URL printed by `clasp create` (or visit [script.google.com](https://script.google.com/)) → **Project Settings** → **Script Properties**, and set `BACKEND_URL` to your tunnel URL. Test and install the add-on in Gmail!
+1. Open the Apps Script project URL printed by Clasp.
+2. Go to **Project Settings** ➔ **Script Properties**.
+3. Add `BACKEND_URL` and set its value to your public FastAPI server URL.
+4. Add `API_KEY` (if your server requires shared-secret authentication).
+5. Click **Deploy** ➔ **Test Deployments** ➔ **Install** to add it to your Gmail sidebar.
 
 ---
 
-## Repository Structure
+## 6. Testing the API (cURL Examples)
 
-- **`backend/`**: FastAPI service (ingest, retrieval, response generation, tests, and indexing scripts).
-- **`addon/`**: Google Apps Script Gmail Add-on UI card layout, forms, and API transport client.
-- **`docs/`**: System architecture layered diagram, expected sample outputs, and observation images.
-- **`eval/`**: Customer query prompt data structures used as verification evaluation fixtures.
+You can check if the API is active and testing correctly using these commands:
+
+### Check Health & Data Index
+```bash
+curl -X GET https://rshalvi-sigfy.hf.space/health
+```
+
+### Request a Draft Reply
+```bash
+curl -X POST https://rshalvi-sigfy.hf.space/draft \
+     -H "Content-Type: application/json" \
+     -d '{
+           "subject": "FSA contribution question",
+           "sender": "jmartinez@company.com",
+           "receiver": "jmartinez@company.com",
+           "body": "Hi, I thought the max I could put into my Health FSA was $3,200. Is that correct for 2026?",
+           "debug": false
+         }'
+```
+
+### Request an Async Batch Draft
+```bash
+curl -X POST https://rshalvi-sigfy.hf.space/batch_draft_async \
+     -H "Content-Type: application/json" \
+     -d '{
+           "requests": [
+             {
+               "subject": "FSA Limit",
+               "sender": "j@company.com",
+               "receiver": "j@company.com",
+               "body": "What is the FSA limit for 2026?"
+             }
+           ]
+         }'
+```
+*(Copy the `task_id` from the response and check status at `https://rshalvi-sigfy.hf.space/task_status/<task_id>`)*
