@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .generate import generate_draft
-from .models import DraftRequest, DraftResponse
+from .models import DraftRequest, DraftResponse, BatchDraftRequest, BatchDraftResponse
 from .retrieval import get_retriever
 
 logging.basicConfig(level=logging.INFO)
@@ -88,3 +88,15 @@ def draft(req: DraftRequest, x_api_key: str | None = Header(default=None)) -> Dr
     )
 
     return resp
+
+
+@app.post("/batch_draft", response_model=BatchDraftResponse)
+def batch_draft(batch_req: BatchDraftRequest, x_api_key: str | None = Header(default=None)) -> BatchDraftResponse:
+    # Authorize once for the batch request
+    _authorize(x_api_key)
+    responses: list[DraftResponse] = []
+    for req in batch_req.requests:
+        # Reuse the existing draft logic per request
+        resp = draft(req, x_api_key)
+        responses.append(resp)
+    return BatchDraftResponse(responses=responses)

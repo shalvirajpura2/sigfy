@@ -37,3 +37,10 @@ class DraftResponse(BaseModel):
     notes: str = ""
     model: str = ""
     retrieved: list[RetrievedChunk] = []
+
+# Batch request/response models
+class BatchDraftRequest(BaseModel):
+    requests: list[DraftRequest] = Field(..., description="List of email draft requests")
+
+class BatchDraftResponse(BaseModel):
+    responses: list[DraftResponse] = Field(..., description="Corresponding draft responses for each request")
