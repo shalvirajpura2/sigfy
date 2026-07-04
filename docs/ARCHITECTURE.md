@@ -13,11 +13,14 @@
      └──────────────────────────┬─────────────────────────────┘
                                 │ JSON Payload
                                 ▼
-                         API / TRACE LAYER
+                          API / TRACE LAYER
      ┌────────────────────────────────────────────────────────┐
      │                   FastAPI (main.py)                    │
-     │  • /draft & /health          • API shared secret auth  │
-     │  • Latency profiling metrics • Privacy-aware request ID│
+     │  • /draft              • /batch_draft                  │
+     │  • /batch_draft_async  • /task_status/{id}             │
+     │  • /task_cancel/{id}   • /health                       │
+     │  • API shared-secret auth  • Privacy-aware request ID  │
+     │  • Latency profiling metrics                           │
      └──────────────────────────┬─────────────────────────────┘
                                 │
                                 ▼
@@ -70,14 +73,13 @@ Hybrid RRF assigns a higher weight to BM25 (`1.5`) than Dense similarity (`1.0`)
 ### 3. Stopword Filtering
 Before lexical indexing and query search, common prepositions and conjunctions (e.g. *what*, *is*, *the*, *of*, *it*) are filtered. This prevents nonsense queries or general conversational text from artificially inflating BM25 scores.
 
-### 4. Multi-Signal Evidence Validation Gate
-Bypassing the LLM on insufficient evidence saves API costs and guarantees zero hallucination. Rather than a simple `OR` gate, the Validation Gate checks a nuanced combination of signals:
-- **Accept** if:
-  - `(dense_score >= settings.val_dense_threshold AND bm25_score >= settings.val_bm25_minimal)` (both vectors and keywords agree)
-  - OR `bm25_score >= settings.val_bm25_strong` (strong keyword match)
-  - OR `dense_score >= settings.val_dense_very_high` (strong semantic match)
-- **Reject** otherwise, bypassing the LLM.
-- *Note*: Thresholds are configurable via environment variables and tuned empirically. In production, they would be calibrated using offline evaluation against a labeled query validation set.
+### 4. Evidence Confidence Signal (formerly Hard Gate)
+The evidence validator scores the top retrieved chunk against configurable thresholds. Rather than hard-blocking the LLM, it now acts as a **confidence signal**:
+- **Strong evidence** (`dense >= val_dense_threshold AND bm25 >= val_bm25_minimal`, or one very-high single-signal): LLM is called and confidence defaults to what the LLM reports.
+- **Weak evidence** (thresholds not met): LLM is **still called** with the best available chunks. A `[Low evidence]` note is appended to the response and confidence is capped at `"low"`. The LLM's own prompt rules handle edge cases (expired plans, closed enrollment windows) correctly.
+- *Rationale*: Hard-blocking the LLM on weak evidence caused some emails (e.g., "Enrolling in long-term care insurance") to silently return a generic placeholder instead of a well-reasoned reply explaining the plan closed in 2019. The signal approach preserves cost-savings intent while ensuring every email receives a meaningful draft.
+- *Thresholds* are configurable via environment variables (`VAL_DENSE_THRESHOLD`, `VAL_BM25_MINIMAL`, `VAL_DENSE_VERY_HIGH`, `VAL_BM25_STRONG`).
+
 
 ### 5. Metadata-Guided Retrieval with Fallback
 When a query is received, **sigfy** scans the text for keywords corresponding to specific plans in `PLAN_DOCS` (e.g., "braces" matching the Dental plan).

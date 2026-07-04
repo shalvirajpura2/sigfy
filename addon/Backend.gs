@@ -14,6 +14,7 @@ function requestDraft_(email) {
     payload: JSON.stringify({
       subject: email.subject,
       sender: email.sender,
+      receiver: email.receiver || email.sender,
       body: email.body
     }),
     muteHttpExceptions: true

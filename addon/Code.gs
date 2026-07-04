@@ -22,6 +22,7 @@ function readCurrentEmail_(e) {
     accessToken: accessToken,
     subject: message.getSubject() || '',
     sender: message.getFrom() || '',
+    receiver: message.getTo() || Session.getActiveUser().getEmail(),
     body: body.slice(0, BODY_LIMIT)
   };
 }
@@ -89,6 +90,7 @@ function processInboxInBackground() {
       var emailContext = {
         subject: lastMessage.getSubject(),
         sender: lastMessage.getFrom(),
+        receiver: lastMessage.getTo() || Session.getActiveUser().getEmail(),
         body: lastMessage.getPlainBody().slice(0, BODY_LIMIT)
       };
       
